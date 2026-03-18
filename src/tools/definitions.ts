@@ -6,10 +6,30 @@ export const toolDefinitions = [
   },
   {
     name: "discord_login",
-    description: "Logs in to Discord using the configured token",
+    description: "Logs in to Discord using the configured token. Call this first before using any other Discord tools.",
     inputSchema: {
       type: "object",
       properties: { random_string: { type: "string" } },
+      required: [],
+    },
+  },
+  {
+    name: "discord_list_guilds",
+    description: "Lists all Discord servers (guilds) the bot is currently connected to. Use this to discover available servers and their IDs. Call this first to find the guild ID needed by other tools.",
+    inputSchema: {
+      type: "object",
+      properties: { random_string: { type: "string" } },
+      required: [],
+    },
+  },
+  {
+    name: "discord_list_channels",
+    description: "Lists all channels in a Discord server with their names, IDs, and types. If no guildId is provided, uses the default configured server. Use this to discover channel IDs for reading messages or sending content.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        guildId: { type: "string", description: "The guild ID. Optional if a default guild is configured." },
+      },
       required: [],
     },
   },
@@ -27,11 +47,11 @@ export const toolDefinitions = [
   },
   {
     name: "discord_get_forum_channels",
-    description: "Lists all forum channels in a specified Discord server (guild)",
+    description: "Lists all forum channels in a Discord server. If no guildId is provided, uses the default configured server.",
     inputSchema: {
       type: "object",
-      properties: { guildId: { type: "string" } },
-      required: ["guildId"],
+      properties: { guildId: { type: "string", description: "Optional if a default guild is configured." } },
+      required: [],
     },
   },
   {
@@ -71,15 +91,15 @@ export const toolDefinitions = [
   },
   {
     name: "discord_create_text_channel",
-    description: "Creates a new text channel in a Discord server with an optional topic",
+    description: "Creates a new text channel in a Discord server with an optional topic. If no guildId is provided, uses the default configured server.",
     inputSchema: {
       type: "object",
       properties: {
-        guildId: { type: "string" },
+        guildId: { type: "string", description: "Optional if a default guild is configured." },
         channelName: { type: "string" },
         topic: { type: "string" },
       },
-      required: ["guildId", "channelName"],
+      required: ["channelName"],
     },
   },
   {
@@ -108,11 +128,11 @@ export const toolDefinitions = [
   },
   {
     name: "discord_get_server_info",
-    description: "Retrieves detailed information about a Discord server including channels and member count",
+    description: "Retrieves detailed information about a Discord server including all channels (with names and IDs), member count, and server features. If no guildId is provided, uses the default configured server.",
     inputSchema: {
       type: "object",
-      properties: { guildId: { type: "string" } },
-      required: ["guildId"],
+      properties: { guildId: { type: "string", description: "Optional if a default guild is configured." } },
+      required: [],
     },
   },
   {

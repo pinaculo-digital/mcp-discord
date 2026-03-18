@@ -4,7 +4,7 @@ import { config } from "../config.js";
 import { DiscordLoginSchema } from "../schemas.js";
 import { toolDefinitions } from "./definitions.js";
 import { handleDiscordSend, handleReadMessages, handleDeleteMessage } from "./message.js";
-import { handleCreateTextChannel, handleDeleteChannel, handleGetServerInfo } from "./channel.js";
+import { handleListGuilds, handleListChannels, handleCreateTextChannel, handleDeleteChannel, handleGetServerInfo } from "./channel.js";
 import { handleGetForumChannels, handleCreateForumPost, handleGetForumPost, handleReplyToForum, handleDeleteForumPost } from "./forum.js";
 import { handleAddReaction, handleAddMultipleReactions, handleRemoveReaction } from "./reaction.js";
 import { handleCreateWebhook, handleSendWebhookMessage, handleEditWebhook, handleDeleteWebhook } from "./webhook.js";
@@ -38,6 +38,8 @@ async function handleDiscordLogin(args: unknown): Promise<ToolResponse> {
 const handlers: Record<string, ToolHandler> = {
   test: handleTest,
   discord_login: handleDiscordLogin,
+  discord_list_guilds: handleListGuilds,
+  discord_list_channels: handleListChannels,
   discord_send: handleDiscordSend,
   discord_read_messages: handleReadMessages,
   discord_delete_message: handleDeleteMessage,

@@ -1,11 +1,17 @@
 import { ChannelType, ForumChannel } from "discord.js";
 import { client } from "../discord.js";
+import { config } from "../config.js";
 import { GetForumChannelsSchema, CreateForumPostSchema, GetForumPostSchema, ReplyToForumSchema, DeleteForumPostSchema } from "../schemas.js";
 
 export async function handleGetForumChannels(args: unknown) {
-  const { guildId } = GetForumChannelsSchema.parse(args);
+  const parsed = GetForumChannelsSchema.parse(args);
   if (!client.isReady()) {
     return { content: [{ type: "text", text: "Discord client not logged in. Please use discord_login tool first." }], isError: true };
+  }
+
+  const guildId = parsed.guildId || config.DISCORD_GUILD_ID;
+  if (!guildId) {
+    return { content: [{ type: "text", text: "No guildId provided and no default DISCORD_GUILD_ID configured." }], isError: true };
   }
 
   const guild = await client.guilds.fetch(guildId);

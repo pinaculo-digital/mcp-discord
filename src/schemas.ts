@@ -4,13 +4,21 @@ export const DiscordLoginSchema = z.object({
   random_string: z.string().optional(),
 });
 
+export const ListGuildsSchema = z.object({
+  random_string: z.string().optional(),
+});
+
+export const ListChannelsSchema = z.object({
+  guildId: z.string().optional(),
+});
+
 export const SendMessageSchema = z.object({
   channelId: z.string(),
   message: z.string(),
 });
 
 export const GetForumChannelsSchema = z.object({
-  guildId: z.string(),
+  guildId: z.string().optional(),
 });
 
 export const CreateForumPostSchema = z.object({
@@ -30,7 +38,7 @@ export const ReplyToForumSchema = z.object({
 });
 
 export const CreateTextChannelSchema = z.object({
-  guildId: z.string(),
+  guildId: z.string().optional(),
   channelName: z.string(),
   topic: z.string().optional(),
 });
@@ -46,7 +54,7 @@ export const ReadMessagesSchema = z.object({
 });
 
 export const GetServerInfoSchema = z.object({
-  guildId: z.string(),
+  guildId: z.string().optional(),
 });
 
 export const AddReactionSchema = z.object({
