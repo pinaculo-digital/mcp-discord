@@ -53,18 +53,25 @@ const client = new Client({
   intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMessages, GatewayIntentBits.MessageContent],
 });
 
-// Create an MCP server
-const server = new Server(
-  {
-    name: "MCP-Discord",
-    version: "1.0.0",
-  },
-  {
-    capabilities: {
-      tools: {},
+// Factory to create an MCP server instance (one per session/transport)
+function createServer() {
+  const server = new Server(
+    {
+      name: "MCP-Discord",
+      version: "1.0.0",
     },
-  },
-);
+    {
+      capabilities: {
+        tools: {},
+      },
+    },
+  );
+  registerHandlers(server);
+  return server;
+}
+
+// Shared server instance for stdio mode
+let server: Server;
 
 const DiscordLoginSchema = z.object({
   random_string: z.string().optional(),
@@ -176,6 +183,7 @@ const DeleteWebhookSchema = z.object({
   reason: z.string().optional(),
 });
 
+function registerHandlers(server: Server) {
 // Set up the tool list
 server.setRequestHandler(ListToolsRequestSchema, async () => {
   return {
@@ -1379,6 +1387,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
     };
   }
 });
+} // end registerHandlers
 
 // Auto-login on startup if token is available
 const autoLogin = async () => {
@@ -1423,7 +1432,8 @@ if (transportMode === "http") {
           delete transports[sid];
         }
       };
-      await server.connect(transport);
+      const sessionServer = createServer();
+      await sessionServer.connect(transport);
     } else {
       res.status(400).json({
         jsonrpc: "2.0",
@@ -1460,6 +1470,7 @@ if (transportMode === "http") {
     console.log(`Endpoint: http://localhost:${port}/mcp`);
   });
 } else {
+  server = createServer();
   const transport = new StdioServerTransport();
   await server.connect(transport);
 }
