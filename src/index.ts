@@ -2,181 +2,176 @@ import { Server } from "@modelcontextprotocol/sdk/server/index.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { z } from "zod";
 import { Client, GatewayIntentBits, Events, TextChannel, ForumChannel, ChannelType } from "discord.js";
-import {
-  CallToolRequestSchema,
-  ListToolsRequestSchema,
-} from "@modelcontextprotocol/sdk/types.js";
+import { CallToolRequestSchema, ListToolsRequestSchema } from "@modelcontextprotocol/sdk/types.js";
+import { envalid } from "./envalid.js";
 
 // Configuration parsing
 let config: any = {};
 
 // Read configuration from environment variables
-if (process.env.DISCORD_TOKEN) {
-    config.DISCORD_TOKEN = process.env.DISCORD_TOKEN;
-    console.log("Config loaded from environment variables. Discord token available:", !!config.DISCORD_TOKEN);
-    if (config.DISCORD_TOKEN) {
-        console.log("Token length:", config.DISCORD_TOKEN.length);
-    }
+if (envalid.DISCORD_TOKEN) {
+  console.log(envalid.DISCORD_TOKEN);
+  config.DISCORD_TOKEN = envalid.DISCORD_TOKEN;
+  console.log("Config loaded from environment variables. Discord token available:", !!config.DISCORD_TOKEN);
+  if (config.DISCORD_TOKEN) {
+    console.log("Token length:", config.DISCORD_TOKEN.length);
+  }
 } else {
-    // Try to parse configuration from command line arguments (for backward compatibility)
-    const configArgIndex = process.argv.indexOf('--config');
-    if (configArgIndex !== -1 && configArgIndex < process.argv.length - 1) {
-        try {
-            let configStr = process.argv[configArgIndex + 1];
-            
-            // Print raw configuration string for debugging
-            console.log("Raw config string:", configStr);
-            
-            // Try to parse JSON
-            config = JSON.parse(configStr);
-            console.log("Config parsed successfully. Discord token available:", !!config.DISCORD_TOKEN);
-            
-            if (config.DISCORD_TOKEN) {
-                console.log("Token length:", config.DISCORD_TOKEN.length);
-            }
-        } catch (error) {
-            console.error("Failed to parse config argument:", error);
-            console.error("Raw config argument:", process.argv[configArgIndex + 1]);
-            
-            // Try to read arguments directly (for debugging)
-            console.log("All arguments:", process.argv);
-        }
-    } else {
-        console.warn("No config found in environment variables or command line arguments");
-        console.log("All arguments:", process.argv);
+  // Try to parse configuration from command line arguments (for backward compatibility)
+  const configArgIndex = process.argv.indexOf("--config");
+  if (configArgIndex !== -1 && configArgIndex < process.argv.length - 1) {
+    try {
+      let configStr = process.argv[configArgIndex + 1];
+
+      // Print raw configuration string for debugging
+      console.log("Raw config string:", configStr);
+
+      // Try to parse JSON
+      config = JSON.parse(configStr);
+      console.log("Config parsed successfully. Discord token available:", !!config.DISCORD_TOKEN);
+
+      if (config.DISCORD_TOKEN) {
+        console.log("Token length:", config.DISCORD_TOKEN.length);
+      }
+    } catch (error) {
+      console.error("Failed to parse config argument:", error);
+      console.error("Raw config argument:", process.argv[configArgIndex + 1]);
+
+      // Try to read arguments directly (for debugging)
+      console.log("All arguments:", process.argv);
     }
+  } else {
+    console.warn("No config found in environment variables or command line arguments");
+    console.log("All arguments:", process.argv);
+  }
 }
 
 // Create Discord client
 const client = new Client({
-    intents: [
-        GatewayIntentBits.Guilds,
-        GatewayIntentBits.GuildMessages,
-        GatewayIntentBits.MessageContent
-    ]
+  intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMessages, GatewayIntentBits.MessageContent],
 });
 
 // Create an MCP server
 const server = new Server(
   {
     name: "MCP-Discord",
-    version: "1.0.0"
+    version: "1.0.0",
   },
   {
     capabilities: {
-      tools: {}
-    }
-  }
+      tools: {},
+    },
+  },
 );
 
 const DiscordLoginSchema = z.object({
-    random_string: z.string().optional()
+  random_string: z.string().optional(),
 });
 
 const SendMessageSchema = z.object({
-    channelId: z.string(),
-    message: z.string()
+  channelId: z.string(),
+  message: z.string(),
 });
 
 const GetForumChannelsSchema = z.object({
-    guildId: z.string()
+  guildId: z.string(),
 });
 
 const CreateForumPostSchema = z.object({
-    forumChannelId: z.string(),
-    title: z.string(),
-    content: z.string(),
-    tags: z.array(z.string()).optional()
+  forumChannelId: z.string(),
+  title: z.string(),
+  content: z.string(),
+  tags: z.array(z.string()).optional(),
 });
 
 const GetForumPostSchema = z.object({
-    threadId: z.string()
+  threadId: z.string(),
 });
 
 const ReplyToForumSchema = z.object({
-    threadId: z.string(),
-    message: z.string()
+  threadId: z.string(),
+  message: z.string(),
 });
 
 const CreateTextChannelSchema = z.object({
-    guildId: z.string(),
-    channelName: z.string(),
-    topic: z.string().optional()
+  guildId: z.string(),
+  channelName: z.string(),
+  topic: z.string().optional(),
 });
 
 const DeleteChannelSchema = z.object({
-    channelId: z.string(),
-    reason: z.string().optional()
+  channelId: z.string(),
+  reason: z.string().optional(),
 });
 
 const ReadMessagesSchema = z.object({
-    channelId: z.string(),
-    limit: z.number().min(1).max(100).optional().default(50)
+  channelId: z.string(),
+  limit: z.number().min(1).max(100).optional().default(50),
 });
 
 const GetServerInfoSchema = z.object({
-    guildId: z.string()
+  guildId: z.string(),
 });
 
 const AddReactionSchema = z.object({
-    channelId: z.string(),
-    messageId: z.string(),
-    emoji: z.string()
+  channelId: z.string(),
+  messageId: z.string(),
+  emoji: z.string(),
 });
 
 const AddMultipleReactionsSchema = z.object({
-    channelId: z.string(),
-    messageId: z.string(),
-    emojis: z.array(z.string())
+  channelId: z.string(),
+  messageId: z.string(),
+  emojis: z.array(z.string()),
 });
 
 const RemoveReactionSchema = z.object({
-    channelId: z.string(),
-    messageId: z.string(),
-    emoji: z.string(),
-    userId: z.string().optional()
+  channelId: z.string(),
+  messageId: z.string(),
+  emoji: z.string(),
+  userId: z.string().optional(),
 });
 
 const DeleteForumPostSchema = z.object({
-    threadId: z.string(),
-    reason: z.string().optional()
+  threadId: z.string(),
+  reason: z.string().optional(),
 });
 
 const DeleteMessageSchema = z.object({
-    channelId: z.string(),
-    messageId: z.string(),
-    reason: z.string().optional()
+  channelId: z.string(),
+  messageId: z.string(),
+  reason: z.string().optional(),
 });
 
 const CreateWebhookSchema = z.object({
-    channelId: z.string(),
-    name: z.string(),
-    avatar: z.string().optional(),
-    reason: z.string().optional()
+  channelId: z.string(),
+  name: z.string(),
+  avatar: z.string().optional(),
+  reason: z.string().optional(),
 });
 
 const SendWebhookMessageSchema = z.object({
-    webhookId: z.string(),
-    webhookToken: z.string(),
-    content: z.string(),
-    username: z.string().optional(),
-    avatarURL: z.string().optional(),
-    threadId: z.string().optional()
+  webhookId: z.string(),
+  webhookToken: z.string(),
+  content: z.string(),
+  username: z.string().optional(),
+  avatarURL: z.string().optional(),
+  threadId: z.string().optional(),
 });
 
 const EditWebhookSchema = z.object({
-    webhookId: z.string(),
-    webhookToken: z.string().optional(),
-    name: z.string().optional(),
-    avatar: z.string().optional(),
-    channelId: z.string().optional(),
-    reason: z.string().optional()
+  webhookId: z.string(),
+  webhookToken: z.string().optional(),
+  name: z.string().optional(),
+  avatar: z.string().optional(),
+  channelId: z.string().optional(),
+  reason: z.string().optional(),
 });
 
 const DeleteWebhookSchema = z.object({
-    webhookId: z.string(),
-    webhookToken: z.string().optional(),
-    reason: z.string().optional()
+  webhookId: z.string(),
+  webhookToken: z.string().optional(),
+  reason: z.string().optional(),
 });
 
 // Set up the tool list
@@ -187,8 +182,8 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
         name: "test",
         description: "A simple test tool to verify the MCP server is working correctly",
         inputSchema: {
-          type: "object"
-        }
+          type: "object",
+        },
       },
       {
         name: "discord_login",
@@ -196,10 +191,10 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
         inputSchema: {
           type: "object",
           properties: {
-            random_string: { type: "string" }
+            random_string: { type: "string" },
           },
-          required: []
-        }
+          required: [],
+        },
       },
       {
         name: "discord_send",
@@ -208,10 +203,10 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
           type: "object",
           properties: {
             channelId: { type: "string" },
-            message: { type: "string" }
+            message: { type: "string" },
           },
-          required: ["channelId", "message"]
-        }
+          required: ["channelId", "message"],
+        },
       },
       {
         name: "discord_get_forum_channels",
@@ -219,10 +214,10 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
         inputSchema: {
           type: "object",
           properties: {
-            guildId: { type: "string" }
+            guildId: { type: "string" },
           },
-          required: ["guildId"]
-        }
+          required: ["guildId"],
+        },
       },
       {
         name: "discord_create_forum_post",
@@ -233,13 +228,13 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
             forumChannelId: { type: "string" },
             title: { type: "string" },
             content: { type: "string" },
-            tags: { 
+            tags: {
               type: "array",
-              items: { type: "string" }
-            }
+              items: { type: "string" },
+            },
           },
-          required: ["forumChannelId", "title", "content"]
-        }
+          required: ["forumChannelId", "title", "content"],
+        },
       },
       {
         name: "discord_get_forum_post",
@@ -247,10 +242,10 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
         inputSchema: {
           type: "object",
           properties: {
-            threadId: { type: "string" }
+            threadId: { type: "string" },
           },
-          required: ["threadId"]
-        }
+          required: ["threadId"],
+        },
       },
       {
         name: "discord_reply_to_forum",
@@ -259,10 +254,10 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
           type: "object",
           properties: {
             threadId: { type: "string" },
-            message: { type: "string" }
+            message: { type: "string" },
           },
-          required: ["threadId", "message"]
-        }
+          required: ["threadId", "message"],
+        },
       },
       {
         name: "discord_create_text_channel",
@@ -272,10 +267,10 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
           properties: {
             guildId: { type: "string" },
             channelName: { type: "string" },
-            topic: { type: "string" }
+            topic: { type: "string" },
           },
-          required: ["guildId", "channelName"]
-        }
+          required: ["guildId", "channelName"],
+        },
       },
       {
         name: "discord_delete_channel",
@@ -284,10 +279,10 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
           type: "object",
           properties: {
             channelId: { type: "string" },
-            reason: { type: "string" }
+            reason: { type: "string" },
           },
-          required: ["channelId"]
-        }
+          required: ["channelId"],
+        },
       },
       {
         name: "discord_read_messages",
@@ -300,11 +295,11 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
               type: "number",
               minimum: 1,
               maximum: 100,
-              default: 50
-            }
+              default: 50,
+            },
           },
-          required: ["channelId"]
-        }
+          required: ["channelId"],
+        },
       },
       {
         name: "discord_get_server_info",
@@ -312,10 +307,10 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
         inputSchema: {
           type: "object",
           properties: {
-            guildId: { type: "string" }
+            guildId: { type: "string" },
           },
-          required: ["guildId"]
-        }
+          required: ["guildId"],
+        },
       },
       {
         name: "discord_add_reaction",
@@ -325,10 +320,10 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
           properties: {
             channelId: { type: "string" },
             messageId: { type: "string" },
-            emoji: { type: "string" }
+            emoji: { type: "string" },
           },
-          required: ["channelId", "messageId", "emoji"]
-        }
+          required: ["channelId", "messageId", "emoji"],
+        },
       },
       {
         name: "discord_add_multiple_reactions",
@@ -340,11 +335,11 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
             messageId: { type: "string" },
             emojis: {
               type: "array",
-              items: { type: "string" }
-            }
+              items: { type: "string" },
+            },
           },
-          required: ["channelId", "messageId", "emojis"]
-        }
+          required: ["channelId", "messageId", "emojis"],
+        },
       },
       {
         name: "discord_remove_reaction",
@@ -355,10 +350,10 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
             channelId: { type: "string" },
             messageId: { type: "string" },
             emoji: { type: "string" },
-            userId: { type: "string" }
+            userId: { type: "string" },
           },
-          required: ["channelId", "messageId", "emoji"]
-        }
+          required: ["channelId", "messageId", "emoji"],
+        },
       },
       {
         name: "discord_delete_forum_post",
@@ -367,10 +362,10 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
           type: "object",
           properties: {
             threadId: { type: "string" },
-            reason: { type: "string" }
+            reason: { type: "string" },
           },
-          required: ["threadId"]
-        }
+          required: ["threadId"],
+        },
       },
       {
         name: "discord_delete_message",
@@ -380,10 +375,10 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
           properties: {
             channelId: { type: "string" },
             messageId: { type: "string" },
-            reason: { type: "string" }
+            reason: { type: "string" },
           },
-          required: ["channelId", "messageId"]
-        }
+          required: ["channelId", "messageId"],
+        },
       },
       {
         name: "discord_create_webhook",
@@ -394,10 +389,10 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
             channelId: { type: "string" },
             name: { type: "string" },
             avatar: { type: "string" },
-            reason: { type: "string" }
+            reason: { type: "string" },
           },
-          required: ["channelId", "name"]
-        }
+          required: ["channelId", "name"],
+        },
       },
       {
         name: "discord_send_webhook_message",
@@ -410,10 +405,10 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
             content: { type: "string" },
             username: { type: "string" },
             avatarURL: { type: "string" },
-            threadId: { type: "string" }
+            threadId: { type: "string" },
           },
-          required: ["webhookId", "webhookToken", "content"]
-        }
+          required: ["webhookId", "webhookToken", "content"],
+        },
       },
       {
         name: "discord_edit_webhook",
@@ -426,10 +421,10 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
             name: { type: "string" },
             avatar: { type: "string" },
             channelId: { type: "string" },
-            reason: { type: "string" }
+            reason: { type: "string" },
           },
-          required: ["webhookId"]
-        }
+          required: ["webhookId"],
+        },
       },
       {
         name: "discord_delete_webhook",
@@ -439,12 +434,12 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
           properties: {
             webhookId: { type: "string" },
             webhookToken: { type: "string" },
-            reason: { type: "string" }
+            reason: { type: "string" },
           },
-          required: ["webhookId"]
-        }
-      }
-    ]
+          required: ["webhookId"],
+        },
+      },
+    ],
   };
 });
 
@@ -456,7 +451,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
     switch (name) {
       case "test": {
         return {
-          content: [{ type: "text", text: `test success` }]
+          content: [{ type: "text", text: `test success` }],
         };
       }
 
@@ -466,19 +461,21 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
           const token = config.DISCORD_TOKEN;
           if (!token) {
             return {
-              content: [{ type: "text", text: "Discord token not found in config. Make sure the --config parameter is correctly set." }],
-              isError: true
+              content: [
+                { type: "text", text: "Discord token not found in config. Make sure the --config parameter is correctly set." },
+              ],
+              isError: true,
             };
           }
-          
+
           await client.login(token);
           return {
-            content: [{ type: "text", text: `Successfully logged in to Discord : ${client.user?.tag}` }]
+            content: [{ type: "text", text: `Successfully logged in to Discord : ${client.user?.tag}` }],
           };
         } catch (error) {
           return {
             content: [{ type: "text", text: `Login failed: ${error}` }],
-            isError: true
+            isError: true,
           };
         }
       }
@@ -489,7 +486,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
           if (!client.isReady()) {
             return {
               content: [{ type: "text", text: "Discord client not logged in. Please use discord_login tool first." }],
-              isError: true
+              isError: true,
             };
           }
 
@@ -497,26 +494,26 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
           if (!channel || !channel.isTextBased()) {
             return {
               content: [{ type: "text", text: `Cannot find text channel ID: ${channelId}` }],
-              isError: true
+              isError: true,
             };
           }
 
           // Ensure channel is text-based and can send messages
-          if ('send' in channel) {
+          if ("send" in channel) {
             await channel.send(message);
             return {
-              content: [{ type: "text", text: `Message successfully sent to channel ID: ${channelId}` }]
+              content: [{ type: "text", text: `Message successfully sent to channel ID: ${channelId}` }],
             };
           } else {
             return {
               content: [{ type: "text", text: `This channel type does not support sending messages` }],
-              isError: true
+              isError: true,
             };
           }
         } catch (error) {
           return {
             content: [{ type: "text", text: `Send message failed: ${error}` }],
-            isError: true
+            isError: true,
           };
         }
       }
@@ -527,7 +524,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
           if (!client.isReady()) {
             return {
               content: [{ type: "text", text: "Discord client not logged in. Please use discord_login tool first." }],
-              isError: true
+              isError: true,
             };
           }
 
@@ -535,36 +532,36 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
           if (!guild) {
             return {
               content: [{ type: "text", text: `Cannot find guild with ID: ${guildId}` }],
-              isError: true
+              isError: true,
             };
           }
 
           // Fetch all channels from the guild
           const channels = await guild.channels.fetch();
-          
+
           // Filter to get only forum channels
-          const forumChannels = channels.filter(channel => channel?.type === ChannelType.GuildForum);
-          
+          const forumChannels = channels.filter((channel) => channel?.type === ChannelType.GuildForum);
+
           if (forumChannels.size === 0) {
             return {
-              content: [{ type: "text", text: `No forum channels found in guild: ${guild.name}` }]
+              content: [{ type: "text", text: `No forum channels found in guild: ${guild.name}` }],
             };
           }
 
           // Format forum channels information
-          const forumInfo = forumChannels.map(channel => ({
+          const forumInfo = forumChannels.map((channel) => ({
             id: channel.id,
             name: channel.name,
-            topic: channel.topic || "No topic set"
+            topic: channel.topic || "No topic set",
           }));
 
           return {
-            content: [{ type: "text", text: JSON.stringify(forumInfo, null, 2) }]
+            content: [{ type: "text", text: JSON.stringify(forumInfo, null, 2) }],
           };
         } catch (error) {
           return {
             content: [{ type: "text", text: `Failed to fetch forum channels: ${error}` }],
-            isError: true
+            isError: true,
           };
         }
       }
@@ -575,7 +572,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
           if (!client.isReady()) {
             return {
               content: [{ type: "text", text: "Discord client not logged in. Please use discord_login tool first." }],
-              isError: true
+              isError: true,
             };
           }
 
@@ -583,42 +580,42 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
           if (!channel || channel.type !== ChannelType.GuildForum) {
             return {
               content: [{ type: "text", text: `Channel ID ${forumChannelId} is not a forum channel.` }],
-              isError: true
+              isError: true,
             };
           }
 
           const forumChannel = channel as ForumChannel;
-          
+
           // Get available tags in the forum
           const availableTags = forumChannel.availableTags;
           let selectedTagIds: string[] = [];
-          
+
           // If tags are provided, find their IDs
           if (tags && tags.length > 0) {
-            selectedTagIds = availableTags
-              .filter(tag => tags.includes(tag.name))
-              .map(tag => tag.id);
+            selectedTagIds = availableTags.filter((tag) => tags.includes(tag.name)).map((tag) => tag.id);
           }
 
           // Create the forum post
           const thread = await forumChannel.threads.create({
             name: title,
             message: {
-              content: content
+              content: content,
             },
-            appliedTags: selectedTagIds.length > 0 ? selectedTagIds : undefined
+            appliedTags: selectedTagIds.length > 0 ? selectedTagIds : undefined,
           });
 
           return {
-            content: [{ 
-              type: "text", 
-              text: `Successfully created forum post "${title}" with ID: ${thread.id}` 
-            }]
+            content: [
+              {
+                type: "text",
+                text: `Successfully created forum post "${title}" with ID: ${thread.id}`,
+              },
+            ],
           };
         } catch (error) {
           return {
             content: [{ type: "text", text: `Failed to create forum post: ${error}` }],
-            isError: true
+            isError: true,
           };
         }
       }
@@ -629,42 +626,42 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
           if (!client.isReady()) {
             return {
               content: [{ type: "text", text: "Discord client not logged in. Please use discord_login tool first." }],
-              isError: true
+              isError: true,
             };
           }
 
           const thread = await client.channels.fetch(threadId);
-          if (!thread || !(thread.isThread())) {
+          if (!thread || !thread.isThread()) {
             return {
               content: [{ type: "text", text: `Cannot find thread with ID: ${threadId}` }],
-              isError: true
+              isError: true,
             };
           }
 
           // Get messages from the thread
           const messages = await thread.messages.fetch({ limit: 10 });
-          
+
           const threadDetails = {
             id: thread.id,
             name: thread.name,
             parentId: thread.parentId,
             messageCount: messages.size,
             createdAt: thread.createdAt,
-            messages: messages.map(msg => ({
+            messages: messages.map((msg) => ({
               id: msg.id,
               content: msg.content,
               author: msg.author.tag,
-              createdAt: msg.createdAt
-            }))
+              createdAt: msg.createdAt,
+            })),
           };
 
           return {
-            content: [{ type: "text", text: JSON.stringify(threadDetails, null, 2) }]
+            content: [{ type: "text", text: JSON.stringify(threadDetails, null, 2) }],
           };
         } catch (error) {
           return {
             content: [{ type: "text", text: `Failed to fetch forum post: ${error}` }],
-            isError: true
+            isError: true,
           };
         }
       }
@@ -675,22 +672,22 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
           if (!client.isReady()) {
             return {
               content: [{ type: "text", text: "Discord client not logged in. Please use discord_login tool first." }],
-              isError: true
+              isError: true,
             };
           }
 
           const thread = await client.channels.fetch(threadId);
-          if (!thread || !(thread.isThread())) {
+          if (!thread || !thread.isThread()) {
             return {
               content: [{ type: "text", text: `Cannot find thread with ID: ${threadId}` }],
-              isError: true
+              isError: true,
             };
           }
 
-          if (!('send' in thread)) {
+          if (!("send" in thread)) {
             return {
               content: [{ type: "text", text: `This thread does not support sending messages` }],
-              isError: true
+              isError: true,
             };
           }
 
@@ -698,15 +695,17 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
           const sentMessage = await thread.send(message);
 
           return {
-            content: [{ 
-              type: "text", 
-              text: `Successfully replied to forum post. Message ID: ${sentMessage.id}` 
-            }]
+            content: [
+              {
+                type: "text",
+                text: `Successfully replied to forum post. Message ID: ${sentMessage.id}`,
+              },
+            ],
           };
         } catch (error) {
           return {
             content: [{ type: "text", text: `Failed to reply to forum post: ${error}` }],
-            isError: true
+            isError: true,
           };
         }
       }
@@ -717,7 +716,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
           if (!client.isReady()) {
             return {
               content: [{ type: "text", text: "Discord client not logged in. Please use discord_login tool first." }],
-              isError: true
+              isError: true,
             };
           }
 
@@ -725,7 +724,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
           if (!guild) {
             return {
               content: [{ type: "text", text: `Cannot find guild with ID: ${guildId}` }],
-              isError: true
+              isError: true,
             };
           }
 
@@ -733,19 +732,21 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
           const channel = await guild.channels.create({
             name: channelName,
             type: ChannelType.GuildText,
-            topic: topic
+            topic: topic,
           });
 
           return {
-            content: [{ 
-              type: "text", 
-              text: `Successfully created text channel "${channelName}" with ID: ${channel.id}` 
-            }]
+            content: [
+              {
+                type: "text",
+                text: `Successfully created text channel "${channelName}" with ID: ${channel.id}`,
+              },
+            ],
           };
         } catch (error) {
           return {
             content: [{ type: "text", text: `Failed to create text channel: ${error}` }],
-            isError: true
+            isError: true,
           };
         }
       }
@@ -756,7 +757,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
           if (!client.isReady()) {
             return {
               content: [{ type: "text", text: "Discord client not logged in. Please use discord_login tool first." }],
-              isError: true
+              isError: true,
             };
           }
 
@@ -764,15 +765,15 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
           if (!channel) {
             return {
               content: [{ type: "text", text: `Cannot find channel with ID: ${channelId}` }],
-              isError: true
+              isError: true,
             };
           }
 
           // Check if channel can be deleted (has delete method)
-          if (!('delete' in channel)) {
+          if (!("delete" in channel)) {
             return {
               content: [{ type: "text", text: `This channel type does not support deletion or the bot lacks permissions` }],
-              isError: true
+              isError: true,
             };
           }
 
@@ -780,15 +781,17 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
           await channel.delete(reason || "Channel deleted via API");
 
           return {
-            content: [{ 
-              type: "text", 
-              text: `Successfully deleted channel with ID: ${channelId}` 
-            }]
+            content: [
+              {
+                type: "text",
+                text: `Successfully deleted channel with ID: ${channelId}`,
+              },
+            ],
           };
         } catch (error) {
           return {
             content: [{ type: "text", text: `Failed to delete channel: ${error}` }],
-            isError: true
+            isError: true,
           };
         }
       }
@@ -799,7 +802,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
           if (!client.isReady()) {
             return {
               content: [{ type: "text", text: "Discord client not logged in. Please use discord_login tool first." }],
-              isError: true
+              isError: true,
             };
           }
 
@@ -807,56 +810,64 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
           if (!channel) {
             return {
               content: [{ type: "text", text: `Cannot find channel with ID: ${channelId}` }],
-              isError: true
+              isError: true,
             };
           }
 
           // Check if channel has messages (text channel, thread, etc.)
-          if (!channel.isTextBased() || !('messages' in channel)) {
+          if (!channel.isTextBased() || !("messages" in channel)) {
             return {
               content: [{ type: "text", text: `Channel type does not support reading messages` }],
-              isError: true
+              isError: true,
             };
           }
 
           // Fetch messages
           const messages = await channel.messages.fetch({ limit });
-          
+
           if (messages.size === 0) {
             return {
-              content: [{ type: "text", text: `No messages found in channel` }]
+              content: [{ type: "text", text: `No messages found in channel` }],
             };
           }
 
-          // Format messages 
-          const formattedMessages = messages.map(msg => ({
-            id: msg.id,
-            content: msg.content,
-            author: {
-              id: msg.author.id,
-              username: msg.author.username,
-              bot: msg.author.bot
-            },
-            timestamp: msg.createdAt,
-            attachments: msg.attachments.size,
-            embeds: msg.embeds.length,
-            replyTo: msg.reference ? msg.reference.messageId : null
-          })).sort((a, b) => a.timestamp.getTime() - b.timestamp.getTime());
+          // Format messages
+          const formattedMessages = messages
+            .map((msg) => ({
+              id: msg.id,
+              content: msg.content,
+              author: {
+                id: msg.author.id,
+                username: msg.author.username,
+                bot: msg.author.bot,
+              },
+              timestamp: msg.createdAt,
+              attachments: msg.attachments.size,
+              embeds: msg.embeds.length,
+              replyTo: msg.reference ? msg.reference.messageId : null,
+            }))
+            .sort((a, b) => a.timestamp.getTime() - b.timestamp.getTime());
 
           return {
-            content: [{ 
-              type: "text", 
-              text: JSON.stringify({
-                channelId,
-                messageCount: formattedMessages.length,
-                messages: formattedMessages
-              }, null, 2) 
-            }]
+            content: [
+              {
+                type: "text",
+                text: JSON.stringify(
+                  {
+                    channelId,
+                    messageCount: formattedMessages.length,
+                    messages: formattedMessages,
+                  },
+                  null,
+                  2,
+                ),
+              },
+            ],
           };
         } catch (error) {
           return {
             content: [{ type: "text", text: `Failed to read messages: ${error}` }],
-            isError: true
+            isError: true,
           };
         }
       }
@@ -867,7 +878,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
           if (!client.isReady()) {
             return {
               content: [{ type: "text", text: "Discord client not logged in. Please use discord_login tool first." }],
-              isError: true
+              isError: true,
             };
           }
 
@@ -875,30 +886,30 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
           if (!guild) {
             return {
               content: [{ type: "text", text: `Cannot find guild with ID: ${guildId}` }],
-              isError: true
+              isError: true,
             };
           }
 
           // Fetch additional guild data
           await guild.fetch();
-          
+
           // Fetch channel information
           const channels = await guild.channels.fetch();
-          
+
           // Categorize channels by type
           const channelsByType = {
-            text: channels.filter(c => c?.type === ChannelType.GuildText).size,
-            voice: channels.filter(c => c?.type === ChannelType.GuildVoice).size,
-            category: channels.filter(c => c?.type === ChannelType.GuildCategory).size,
-            forum: channels.filter(c => c?.type === ChannelType.GuildForum).size,
-            announcement: channels.filter(c => c?.type === ChannelType.GuildAnnouncement).size,
-            stage: channels.filter(c => c?.type === ChannelType.GuildStageVoice).size,
-            total: channels.size
+            text: channels.filter((c) => c?.type === ChannelType.GuildText).size,
+            voice: channels.filter((c) => c?.type === ChannelType.GuildVoice).size,
+            category: channels.filter((c) => c?.type === ChannelType.GuildCategory).size,
+            forum: channels.filter((c) => c?.type === ChannelType.GuildForum).size,
+            announcement: channels.filter((c) => c?.type === ChannelType.GuildAnnouncement).size,
+            stage: channels.filter((c) => c?.type === ChannelType.GuildStageVoice).size,
+            total: channels.size,
           };
-          
+
           // Fetch member count
           const approximateMemberCount = guild.approximateMemberCount || "unknown";
-          
+
           // Format guild information
           const guildInfo = {
             id: guild.id,
@@ -912,17 +923,17 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
             features: guild.features,
             premium: {
               tier: guild.premiumTier,
-              subscriptions: guild.premiumSubscriptionCount
-            }
+              subscriptions: guild.premiumSubscriptionCount,
+            },
           };
 
           return {
-            content: [{ type: "text", text: JSON.stringify(guildInfo, null, 2) }]
+            content: [{ type: "text", text: JSON.stringify(guildInfo, null, 2) }],
           };
         } catch (error) {
           return {
             content: [{ type: "text", text: `Failed to fetch server info: ${error}` }],
-            isError: true
+            isError: true,
           };
         }
       }
@@ -933,15 +944,15 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
           if (!client.isReady()) {
             return {
               content: [{ type: "text", text: "Discord client not logged in. Please use discord_login tool first." }],
-              isError: true
+              isError: true,
             };
           }
 
           const channel = await client.channels.fetch(channelId);
-          if (!channel || !channel.isTextBased() || !('messages' in channel)) {
+          if (!channel || !channel.isTextBased() || !("messages" in channel)) {
             return {
               content: [{ type: "text", text: `Cannot find text channel with ID: ${channelId}` }],
-              isError: true
+              isError: true,
             };
           }
 
@@ -949,7 +960,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
           if (!message) {
             return {
               content: [{ type: "text", text: `Cannot find message with ID: ${messageId}` }],
-              isError: true
+              isError: true,
             };
           }
 
@@ -957,15 +968,17 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
           await message.react(emoji);
 
           return {
-            content: [{ 
-              type: "text", 
-              text: `Successfully added reaction ${emoji} to message ID: ${messageId}` 
-            }]
+            content: [
+              {
+                type: "text",
+                text: `Successfully added reaction ${emoji} to message ID: ${messageId}`,
+              },
+            ],
           };
         } catch (error) {
           return {
             content: [{ type: "text", text: `Failed to add reaction: ${error}` }],
-            isError: true
+            isError: true,
           };
         }
       }
@@ -976,15 +989,15 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
           if (!client.isReady()) {
             return {
               content: [{ type: "text", text: "Discord client not logged in. Please use discord_login tool first." }],
-              isError: true
+              isError: true,
             };
           }
 
           const channel = await client.channels.fetch(channelId);
-          if (!channel || !channel.isTextBased() || !('messages' in channel)) {
+          if (!channel || !channel.isTextBased() || !("messages" in channel)) {
             return {
               content: [{ type: "text", text: `Cannot find text channel with ID: ${channelId}` }],
-              isError: true
+              isError: true,
             };
           }
 
@@ -992,7 +1005,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
           if (!message) {
             return {
               content: [{ type: "text", text: `Cannot find message with ID: ${messageId}` }],
-              isError: true
+              isError: true,
             };
           }
 
@@ -1000,19 +1013,21 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
           for (const emoji of emojis) {
             await message.react(emoji);
             // Small delay to prevent rate limiting
-            await new Promise(resolve => setTimeout(resolve, 300));
+            await new Promise((resolve) => setTimeout(resolve, 300));
           }
 
           return {
-            content: [{ 
-              type: "text", 
-              text: `Successfully added ${emojis.length} reactions to message ID: ${messageId}` 
-            }]
+            content: [
+              {
+                type: "text",
+                text: `Successfully added ${emojis.length} reactions to message ID: ${messageId}`,
+              },
+            ],
           };
         } catch (error) {
           return {
             content: [{ type: "text", text: `Failed to add reactions: ${error}` }],
-            isError: true
+            isError: true,
           };
         }
       }
@@ -1023,15 +1038,15 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
           if (!client.isReady()) {
             return {
               content: [{ type: "text", text: "Discord client not logged in. Please use discord_login tool first." }],
-              isError: true
+              isError: true,
             };
           }
 
           const channel = await client.channels.fetch(channelId);
-          if (!channel || !channel.isTextBased() || !('messages' in channel)) {
+          if (!channel || !channel.isTextBased() || !("messages" in channel)) {
             return {
               content: [{ type: "text", text: `Cannot find text channel with ID: ${channelId}` }],
-              isError: true
+              isError: true,
             };
           }
 
@@ -1039,46 +1054,50 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
           if (!message) {
             return {
               content: [{ type: "text", text: `Cannot find message with ID: ${messageId}` }],
-              isError: true
+              isError: true,
             };
           }
 
           // Get the reactions
           const reactions = message.reactions.cache;
-          
+
           // Find the specific reaction
-          const reaction = reactions.find(r => r.emoji.toString() === emoji || r.emoji.name === emoji);
-          
+          const reaction = reactions.find((r) => r.emoji.toString() === emoji || r.emoji.name === emoji);
+
           if (!reaction) {
             return {
               content: [{ type: "text", text: `Reaction ${emoji} not found on message ID: ${messageId}` }],
-              isError: true
+              isError: true,
             };
           }
-          
+
           if (userId) {
             // Remove a specific user's reaction
             await reaction.users.remove(userId);
             return {
-              content: [{ 
-                type: "text", 
-                text: `Successfully removed reaction ${emoji} from user ID: ${userId} on message ID: ${messageId}` 
-              }]
+              content: [
+                {
+                  type: "text",
+                  text: `Successfully removed reaction ${emoji} from user ID: ${userId} on message ID: ${messageId}`,
+                },
+              ],
             };
           } else {
             // Remove bot's reaction
             await reaction.users.remove(client.user.id);
             return {
-              content: [{ 
-                type: "text", 
-                text: `Successfully removed bot's reaction ${emoji} from message ID: ${messageId}` 
-              }]
+              content: [
+                {
+                  type: "text",
+                  text: `Successfully removed bot's reaction ${emoji} from message ID: ${messageId}`,
+                },
+              ],
             };
           }
         } catch (error) {
           return {
             content: [{ type: "text", text: `Failed to remove reaction: ${error}` }],
-            isError: true
+            isError: true,
           };
         }
       }
@@ -1089,7 +1108,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
           if (!client.isReady()) {
             return {
               content: [{ type: "text", text: "Discord client not logged in. Please use discord_login tool first." }],
-              isError: true
+              isError: true,
             };
           }
 
@@ -1097,7 +1116,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
           if (!thread || !thread.isThread()) {
             return {
               content: [{ type: "text", text: `Cannot find forum post/thread with ID: ${threadId}` }],
-              isError: true
+              isError: true,
             };
           }
 
@@ -1105,15 +1124,17 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
           await thread.delete(reason || "Forum post deleted via API");
 
           return {
-            content: [{ 
-              type: "text", 
-              text: `Successfully deleted forum post/thread with ID: ${threadId}` 
-            }]
+            content: [
+              {
+                type: "text",
+                text: `Successfully deleted forum post/thread with ID: ${threadId}`,
+              },
+            ],
           };
         } catch (error) {
           return {
             content: [{ type: "text", text: `Failed to delete forum post: ${error}` }],
-            isError: true
+            isError: true,
           };
         }
       }
@@ -1124,15 +1145,15 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
           if (!client.isReady()) {
             return {
               content: [{ type: "text", text: "Discord client not logged in. Please use discord_login tool first." }],
-              isError: true
+              isError: true,
             };
           }
 
           const channel = await client.channels.fetch(channelId);
-          if (!channel || !channel.isTextBased() || !('messages' in channel)) {
+          if (!channel || !channel.isTextBased() || !("messages" in channel)) {
             return {
               content: [{ type: "text", text: `Cannot find text channel with ID: ${channelId}` }],
-              isError: true
+              isError: true,
             };
           }
 
@@ -1141,7 +1162,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
           if (!message) {
             return {
               content: [{ type: "text", text: `Cannot find message with ID: ${messageId}` }],
-              isError: true
+              isError: true,
             };
           }
 
@@ -1149,15 +1170,17 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
           await message.delete();
 
           return {
-            content: [{ 
-              type: "text", 
-              text: `Successfully deleted message with ID: ${messageId} from channel: ${channelId}` 
-            }]
+            content: [
+              {
+                type: "text",
+                text: `Successfully deleted message with ID: ${messageId} from channel: ${channelId}`,
+              },
+            ],
           };
         } catch (error) {
           return {
             content: [{ type: "text", text: `Failed to delete message: ${error}` }],
-            isError: true
+            isError: true,
           };
         }
       }
@@ -1168,7 +1191,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
           if (!client.isReady()) {
             return {
               content: [{ type: "text", text: "Discord client not logged in. Please use discord_login tool first." }],
-              isError: true
+              isError: true,
             };
           }
 
@@ -1176,15 +1199,15 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
           if (!channel || !channel.isTextBased()) {
             return {
               content: [{ type: "text", text: `Cannot find text channel with ID: ${channelId}` }],
-              isError: true
+              isError: true,
             };
           }
 
           // Check if the channel supports webhooks
-          if (!('createWebhook' in channel)) {
+          if (!("createWebhook" in channel)) {
             return {
               content: [{ type: "text", text: `Channel type does not support webhooks: ${channelId}` }],
-              isError: true
+              isError: true,
             };
           }
 
@@ -1192,19 +1215,21 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
           const webhook = await channel.createWebhook({
             name: name,
             avatar: avatar,
-            reason: reason
+            reason: reason,
           });
 
           return {
-            content: [{ 
-              type: "text", 
-              text: `Successfully created webhook with ID: ${webhook.id} and token: ${webhook.token}` 
-            }]
+            content: [
+              {
+                type: "text",
+                text: `Successfully created webhook with ID: ${webhook.id} and token: ${webhook.token}`,
+              },
+            ],
           };
         } catch (error) {
           return {
             content: [{ type: "text", text: `Failed to create webhook: ${error}` }],
-            isError: true
+            isError: true,
           };
         }
       }
@@ -1215,7 +1240,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
           if (!client.isReady()) {
             return {
               content: [{ type: "text", text: "Discord client not logged in. Please use discord_login tool first." }],
-              isError: true
+              isError: true,
             };
           }
 
@@ -1223,7 +1248,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
           if (!webhook) {
             return {
               content: [{ type: "text", text: `Cannot find webhook with ID: ${webhookId}` }],
-              isError: true
+              isError: true,
             };
           }
 
@@ -1232,19 +1257,21 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
             content: content,
             username: username,
             avatarURL: avatarURL,
-            threadId: threadId
+            threadId: threadId,
           });
 
           return {
-            content: [{ 
-              type: "text", 
-              text: `Successfully sent webhook message to webhook ID: ${webhookId}` 
-            }]
+            content: [
+              {
+                type: "text",
+                text: `Successfully sent webhook message to webhook ID: ${webhookId}`,
+              },
+            ],
           };
         } catch (error) {
           return {
             content: [{ type: "text", text: `Failed to send webhook message: ${error}` }],
-            isError: true
+            isError: true,
           };
         }
       }
@@ -1255,7 +1282,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
           if (!client.isReady()) {
             return {
               content: [{ type: "text", text: "Discord client not logged in. Please use discord_login tool first." }],
-              isError: true
+              isError: true,
             };
           }
 
@@ -1263,7 +1290,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
           if (!webhook) {
             return {
               content: [{ type: "text", text: `Cannot find webhook with ID: ${webhookId}` }],
-              isError: true
+              isError: true,
             };
           }
 
@@ -1272,19 +1299,21 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
             name: name,
             avatar: avatar,
             channel: channelId,
-            reason: reason
+            reason: reason,
           });
 
           return {
-            content: [{ 
-              type: "text", 
-              text: `Successfully edited webhook with ID: ${webhook.id}` 
-            }]
+            content: [
+              {
+                type: "text",
+                text: `Successfully edited webhook with ID: ${webhook.id}`,
+              },
+            ],
           };
         } catch (error) {
           return {
             content: [{ type: "text", text: `Failed to edit webhook: ${error}` }],
-            isError: true
+            isError: true,
           };
         }
       }
@@ -1295,7 +1324,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
           if (!client.isReady()) {
             return {
               content: [{ type: "text", text: "Discord client not logged in. Please use discord_login tool first." }],
-              isError: true
+              isError: true,
             };
           }
 
@@ -1303,7 +1332,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
           if (!webhook) {
             return {
               content: [{ type: "text", text: `Cannot find webhook with ID: ${webhookId}` }],
-              isError: true
+              isError: true,
             };
           }
 
@@ -1311,15 +1340,17 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
           await webhook.delete(reason || "Webhook deleted via API");
 
           return {
-            content: [{ 
-              type: "text", 
-              text: `Successfully deleted webhook with ID: ${webhook.id}` 
-            }]
+            content: [
+              {
+                type: "text",
+                text: `Successfully deleted webhook with ID: ${webhook.id}`,
+              },
+            ],
           };
         } catch (error) {
           return {
             content: [{ type: "text", text: `Failed to delete webhook: ${error}` }],
-            isError: true
+            isError: true,
           };
         }
       }
@@ -1330,39 +1361,39 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
   } catch (error) {
     if (error instanceof z.ZodError) {
       return {
-        content: [{ 
-          type: "text", 
-          text: `Invalid arguments: ${error.errors
-            .map((e) => `${e.path.join(".")}: ${e.message}`)
-            .join(", ")}` 
-        }],
-        isError: true
+        content: [
+          {
+            type: "text",
+            text: `Invalid arguments: ${error.errors.map((e) => `${e.path.join(".")}: ${e.message}`).join(", ")}`,
+          },
+        ],
+        isError: true,
       };
     }
-    
+
     return {
       content: [{ type: "text", text: `Error executing tool: ${error}` }],
-      isError: true
+      isError: true,
     };
   }
 });
 
 // Auto-login on startup if token is available
 const autoLogin = async () => {
-    const token = config.DISCORD_TOKEN;
-    if (token) {
-        try {
-            await client.login(token);
-        } catch (error) {
-            console.error("Auto-login failed:", error);
-        }
-    } else {
-        console.log("No Discord token found in config, skipping auto-login");
+  const token = config.DISCORD_TOKEN;
+  if (token) {
+    try {
+      await client.login(token);
+    } catch (error) {
+      console.error("Auto-login failed:", error);
     }
+  } else {
+    console.log("No Discord token found in config, skipping auto-login");
+  }
 };
 
 // Start auto-login process
 autoLogin();
-  
+
 const transport = new StdioServerTransport();
 await server.connect(transport);
