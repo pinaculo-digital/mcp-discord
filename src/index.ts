@@ -1,10 +1,11 @@
 import { Server } from "@modelcontextprotocol/sdk/server/index.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
-import { SSEServerTransport } from "@modelcontextprotocol/sdk/server/sse.js";
+import { StreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/streamableHttp.js";
 import { z } from "zod";
 import { Client, GatewayIntentBits, Events, TextChannel, ForumChannel, ChannelType } from "discord.js";
-import { CallToolRequestSchema, ListToolsRequestSchema } from "@modelcontextprotocol/sdk/types.js";
+import { CallToolRequestSchema, ListToolsRequestSchema, isInitializeRequest } from "@modelcontextprotocol/sdk/types.js";
 import express from "express";
+import { randomUUID } from "node:crypto";
 import { envalid } from "./envalid.js";
 
 // Configuration parsing
@@ -12,7 +13,6 @@ let config: any = {};
 
 // Read configuration from environment variables
 if (envalid.DISCORD_TOKEN) {
-  console.log(envalid.DISCORD_TOKEN);
   config.DISCORD_TOKEN = envalid.DISCORD_TOKEN;
   console.log("Config loaded from environment variables. Discord token available:", !!config.DISCORD_TOKEN);
   if (config.DISCORD_TOKEN) {
@@ -1399,33 +1399,65 @@ autoLogin();
 
 const transportMode = process.env.MCP_TRANSPORT || "stdio";
 
-if (transportMode === "sse") {
+if (transportMode === "http") {
   const app = express();
-  const transports: Record<string, SSEServerTransport> = {};
+  app.use(express.json());
+  const transports: Record<string, StreamableHTTPServerTransport> = {};
 
-  app.get("/sse", async (req, res) => {
-    const transport = new SSEServerTransport("/messages", res);
-    transports[transport.sessionId] = transport;
-    res.on("close", () => {
-      delete transports[transport.sessionId];
-    });
-    await server.connect(transport);
-  });
+  app.post("/mcp", async (req, res) => {
+    const sessionId = req.headers["mcp-session-id"] as string | undefined;
+    let transport: StreamableHTTPServerTransport;
 
-  app.post("/messages", async (req, res) => {
-    const sessionId = req.query.sessionId as string;
-    const transport = transports[sessionId];
-    if (!transport) {
-      res.status(400).send("Invalid session ID");
+    if (sessionId && transports[sessionId]) {
+      transport = transports[sessionId];
+    } else if (!sessionId && isInitializeRequest(req.body)) {
+      transport = new StreamableHTTPServerTransport({
+        sessionIdGenerator: () => randomUUID(),
+        onsessioninitialized: (sid) => {
+          transports[sid] = transport;
+        },
+      });
+      transport.onclose = () => {
+        const sid = transport.sessionId;
+        if (sid && transports[sid]) {
+          delete transports[sid];
+        }
+      };
+      await server.connect(transport);
+    } else {
+      res.status(400).json({
+        jsonrpc: "2.0",
+        error: { code: -32000, message: "Bad Request: No valid session ID" },
+        id: null,
+      });
       return;
     }
-    await transport.handlePostMessage(req, res);
+
+    await transport.handleRequest(req, res, req.body);
+  });
+
+  app.get("/mcp", async (req, res) => {
+    const sessionId = req.headers["mcp-session-id"] as string | undefined;
+    if (!sessionId || !transports[sessionId]) {
+      res.status(400).send("Invalid or missing session ID");
+      return;
+    }
+    await transports[sessionId].handleRequest(req, res);
+  });
+
+  app.delete("/mcp", async (req, res) => {
+    const sessionId = req.headers["mcp-session-id"] as string | undefined;
+    if (!sessionId || !transports[sessionId]) {
+      res.status(400).send("Invalid or missing session ID");
+      return;
+    }
+    await transports[sessionId].handleRequest(req, res);
   });
 
   const port = parseInt(process.env.PORT || "3000", 10);
   app.listen(port, () => {
-    console.log(`MCP SSE server running on port ${port}`);
-    console.log(`SSE endpoint: http://localhost:${port}/sse`);
+    console.log(`MCP Streamable HTTP server running on port ${port}`);
+    console.log(`Endpoint: http://localhost:${port}/mcp`);
   });
 } else {
   const transport = new StdioServerTransport();
