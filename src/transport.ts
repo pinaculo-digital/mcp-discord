@@ -89,14 +89,18 @@ export async function startTransport() {
       }
     });
 
-    // Health check endpoint
+    // Root and health check endpoints (needed for EasyPanel/Docker health checks)
+    app.get("/", (_req, res) => {
+      res.json({ status: "ok", service: "MCP-Discord", endpoint: "/mcp" });
+    });
+
     app.get("/health", (_req, res) => {
       res.json({ status: "ok" });
     });
 
     const port = parseInt(process.env.PORT || "3000", 10);
-    app.listen(port, () => {
-      console.log(`MCP Streamable HTTP server running on port ${port}`);
+    app.listen(port, "0.0.0.0", () => {
+      console.log(`MCP Streamable HTTP server running on 0.0.0.0:${port}`);
       console.log(`Endpoint: http://localhost:${port}/mcp`);
     });
   } else {
@@ -112,4 +116,11 @@ process.on("uncaughtException", (error) => {
 });
 process.on("unhandledRejection", (reason) => {
   console.error("Unhandled rejection:", reason);
+});
+process.on("SIGTERM", () => {
+  console.log("Received SIGTERM signal — keeping server alive");
+});
+process.on("SIGINT", () => {
+  console.log("Received SIGINT signal");
+  process.exit(0);
 });
