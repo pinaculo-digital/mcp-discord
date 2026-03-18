@@ -1,8 +1,10 @@
 import { Server } from "@modelcontextprotocol/sdk/server/index.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
+import { SSEServerTransport } from "@modelcontextprotocol/sdk/server/sse.js";
 import { z } from "zod";
 import { Client, GatewayIntentBits, Events, TextChannel, ForumChannel, ChannelType } from "discord.js";
 import { CallToolRequestSchema, ListToolsRequestSchema } from "@modelcontextprotocol/sdk/types.js";
+import express from "express";
 import { envalid } from "./envalid.js";
 
 // Configuration parsing
@@ -1395,5 +1397,37 @@ const autoLogin = async () => {
 // Start auto-login process
 autoLogin();
 
-const transport = new StdioServerTransport();
-await server.connect(transport);
+const transportMode = process.env.MCP_TRANSPORT || "stdio";
+
+if (transportMode === "sse") {
+  const app = express();
+  const transports: Record<string, SSEServerTransport> = {};
+
+  app.get("/sse", async (req, res) => {
+    const transport = new SSEServerTransport("/messages", res);
+    transports[transport.sessionId] = transport;
+    res.on("close", () => {
+      delete transports[transport.sessionId];
+    });
+    await server.connect(transport);
+  });
+
+  app.post("/messages", async (req, res) => {
+    const sessionId = req.query.sessionId as string;
+    const transport = transports[sessionId];
+    if (!transport) {
+      res.status(400).send("Invalid session ID");
+      return;
+    }
+    await transport.handlePostMessage(req, res);
+  });
+
+  const port = parseInt(process.env.PORT || "3000", 10);
+  app.listen(port, () => {
+    console.log(`MCP SSE server running on port ${port}`);
+    console.log(`SSE endpoint: http://localhost:${port}/sse`);
+  });
+} else {
+  const transport = new StdioServerTransport();
+  await server.connect(transport);
+}
