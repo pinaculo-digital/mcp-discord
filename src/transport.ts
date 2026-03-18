@@ -1,9 +1,30 @@
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { StreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/streamableHttp.js";
 import { isInitializeRequest } from "@modelcontextprotocol/sdk/types.js";
-import express from "express";
+import express, { Request, Response, NextFunction } from "express";
 import { randomUUID } from "node:crypto";
 import { createServer } from "./server.js";
+import { config } from "./config.js";
+
+function authMiddleware(req: Request, res: Response, next: NextFunction) {
+  const secret = config.MCP_CLIENT_SECRET;
+  if (!secret) {
+    next();
+    return;
+  }
+
+  const authHeader = req.headers.authorization;
+  if (authHeader === `Bearer ${secret}`) {
+    next();
+    return;
+  }
+
+  res.status(401).json({
+    jsonrpc: "2.0",
+    error: { code: -32001, message: "Unauthorized: invalid or missing client secret" },
+    id: null,
+  });
+}
 
 export async function startTransport() {
   const transportMode = process.env.MCP_TRANSPORT || "stdio";
@@ -12,6 +33,9 @@ export async function startTransport() {
     const app = express();
     app.use(express.json());
     const transports: Record<string, StreamableHTTPServerTransport> = {};
+
+    // Apply auth to all /mcp routes
+    app.use("/mcp", authMiddleware);
 
     app.post("/mcp", async (req, res) => {
       try {

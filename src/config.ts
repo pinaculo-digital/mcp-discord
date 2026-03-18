@@ -1,10 +1,11 @@
 import { envalid } from "./envalid.js";
 
-export const config: { DISCORD_TOKEN?: string; DISCORD_GUILD_ID?: string } = {};
+export const config: { DISCORD_TOKEN?: string; DISCORD_GUILD_ID?: string; MCP_CLIENT_SECRET?: string } = {};
 
 if (envalid.DISCORD_TOKEN) {
   config.DISCORD_TOKEN = envalid.DISCORD_TOKEN;
   config.DISCORD_GUILD_ID = envalid.DISCORD_GUILD_ID || undefined;
+  config.MCP_CLIENT_SECRET = envalid.MCP_CLIENT_SECRET || undefined;
   console.log("Config loaded from environment variables. Discord token available:", !!config.DISCORD_TOKEN);
   if (config.DISCORD_GUILD_ID) {
     console.log("Default guild ID configured:", config.DISCORD_GUILD_ID);
