@@ -9,6 +9,15 @@ import { config } from "./config.js";
 // In-memory token store
 const validTokens = new Set<string>();
 
+interface RegisteredClient {
+  client_id: string;
+  client_name?: string;
+  redirect_uris: string[];
+  created_at: number;
+}
+
+const clients = new Map<string, RegisteredClient>();
+
 function generateAccessToken(clientId: string, clientSecret: string): string {
   return createHash("sha256").update(`${clientId}:${clientSecret}:${randomUUID()}`).digest("hex");
 }
@@ -72,6 +81,35 @@ export async function startTransport() {
         resource: `${baseUrl}/mcp`,
         authorization_servers: [baseUrl],
         bearer_methods_supported: ["header"],
+      });
+    });
+
+    // OAuth2 dynamic client registration (RFC 7591)
+    app.post("/register", (req, res) => {
+      const redirectUris = req.body?.redirect_uris;
+      if (!Array.isArray(redirectUris) || redirectUris.length === 0 || !redirectUris.every((u) => typeof u === "string" && u.length > 0)) {
+        res.status(400).json({ error: "invalid_redirect_uri", error_description: "redirect_uris must be a non-empty array of strings" });
+        return;
+      }
+
+      const clientName = typeof req.body?.client_name === "string" ? req.body.client_name : undefined;
+      const clientId = randomUUID();
+      const createdAt = Math.floor(Date.now() / 1000);
+
+      clients.set(clientId, {
+        client_id: clientId,
+        client_name: clientName,
+        redirect_uris: redirectUris,
+        created_at: createdAt,
+      });
+
+      res.status(201).json({
+        client_id: clientId,
+        client_id_issued_at: createdAt,
+        redirect_uris: redirectUris,
+        grant_types: ["authorization_code"],
+        response_types: ["code"],
+        token_endpoint_auth_method: "none",
       });
     });
 
