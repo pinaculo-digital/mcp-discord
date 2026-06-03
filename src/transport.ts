@@ -52,14 +52,26 @@ export async function startTransport() {
     const transports: Record<string, StreamableHTTPServerTransport> = {};
 
     // OAuth2 metadata discovery
-    app.get("/.well-known/oauth-authorization-server", (_req, res) => {
-      const baseUrl = `${_req.protocol}://${_req.get("host")}`;
+    app.get("/.well-known/oauth-authorization-server", (req, res) => {
+      const baseUrl = `${req.protocol}://${req.get("host")}`;
       res.json({
         issuer: baseUrl,
+        authorization_endpoint: `${baseUrl}/authorize`,
         token_endpoint: `${baseUrl}/oauth/token`,
-        token_endpoint_auth_methods_supported: ["client_secret_post"],
-        grant_types_supported: ["client_credentials"],
-        response_types_supported: ["token"],
+        registration_endpoint: `${baseUrl}/register`,
+        grant_types_supported: ["authorization_code"],
+        response_types_supported: ["code"],
+        code_challenge_methods_supported: ["S256"],
+        token_endpoint_auth_methods_supported: ["none"],
+      });
+    });
+
+    app.get("/.well-known/oauth-protected-resource", (req, res) => {
+      const baseUrl = `${req.protocol}://${req.get("host")}`;
+      res.json({
+        resource: `${baseUrl}/mcp`,
+        authorization_servers: [baseUrl],
+        bearer_methods_supported: ["header"],
       });
     });
 
