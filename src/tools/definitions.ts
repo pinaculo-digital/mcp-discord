@@ -83,7 +83,8 @@ export const toolDefinitions = [
   },
   {
     name: "discord_get_forum_post",
-    description: "Retrieves details about a forum post including its messages",
+    description:
+      "Retrieves details about a forum post including its messages, each with attachments[] (images/videos/files) and embeds[]. Discord CDN attachment URLs are signed and expire — download any attachment promptly.",
     inputSchema: {
       type: "object",
       properties: { threadId: { type: "string" } },
@@ -129,7 +130,8 @@ export const toolDefinitions = [
   },
   {
     name: "discord_read_messages",
-    description: "Retrieves messages from a Discord text channel with a configurable limit",
+    description:
+      "Retrieves messages from a Discord text channel with a configurable limit. Each message includes attachments[] (images/videos/files) and embeds[]. Discord CDN attachment URLs are signed and expire — download any attachment promptly.",
     inputSchema: {
       type: "object",
       properties: {

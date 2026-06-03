@@ -249,11 +249,13 @@ After deploying, run these four checks against the live URL (replace `https://di
 
 ### Messages and Reactions
 
-- `discord_read_messages`: Read channel messages
+- `discord_read_messages`: Read channel messages (each with `attachments[]` and `embeds[]`)
 - `discord_add_reaction`: Add a reaction to a message
 - `discord_add_multiple_reactions`: Add multiple reactions to a message
 - `discord_remove_reaction`: Remove a reaction from a message
 - `discord_delete_message`: Delete a specific message from a channel
+
+> **Attachments:** `discord_read_messages` and `discord_get_forum_post` return each message's `attachments[]` (image/video/file) and `embeds[]`. Discord CDN URLs are signed and **expire** — download attachments promptly; don't cache the URL.
 
 ### Webhook Management
 

@@ -1,5 +1,6 @@
 import { client } from "../discord.js";
 import { SendMessageSchema, ReadMessagesSchema, DeleteMessageSchema } from "../schemas.js";
+import { serializeAttachments, serializeEmbeds } from "./message-format.js";
 
 export async function handleDiscordSend(args: unknown) {
   const { channelId, message } = SendMessageSchema.parse(args);
@@ -47,8 +48,8 @@ export async function handleReadMessages(args: unknown) {
       content: msg.content,
       author: { id: msg.author.id, username: msg.author.username, bot: msg.author.bot },
       timestamp: msg.createdAt,
-      attachments: msg.attachments.size,
-      embeds: msg.embeds.length,
+      attachments: serializeAttachments(msg),
+      embeds: serializeEmbeds(msg),
       replyTo: msg.reference ? msg.reference.messageId : null,
     }))
     .sort((a, b) => a.timestamp.getTime() - b.timestamp.getTime());
