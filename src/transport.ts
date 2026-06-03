@@ -6,8 +6,8 @@ import { randomUUID, createHash } from "node:crypto";
 import { createServer } from "./server.js";
 import { config } from "./config.js";
 
-// In-memory token store
-const validTokens = new Set<string>();
+// In-memory token store (token → expires_at in ms)
+const validTokens = new Map<string, number>();
 
 interface RegisteredClient {
   client_id: string;
@@ -53,9 +53,13 @@ function authMiddleware(req: Request, res: Response, next: NextFunction) {
     next();
     return;
   }
-  if (validTokens.has(token)) {
+  const exp = validTokens.get(token);
+  if (exp && exp >= Date.now()) {
     next();
     return;
+  }
+  if (exp) {
+    validTokens.delete(token);
   }
 
   res.status(401).json({
@@ -196,7 +200,7 @@ export async function startTransport() {
         }
 
         const accessToken = generateAccessToken(clientId, clientSecret);
-        validTokens.add(accessToken);
+        validTokens.set(accessToken, Date.now() + 86_400_000);
 
         console.log("OAuth2 token issued for client:", clientId);
 
@@ -238,7 +242,7 @@ export async function startTransport() {
 
         authCodes.delete(code);
         const accessToken = generateAccessToken(clientId, "pkce");
-        validTokens.add(accessToken);
+        validTokens.set(accessToken, Date.now() + 86_400_000);
 
         console.log("OAuth2 token issued (PKCE) for client:", clientId);
 
