@@ -18,6 +18,15 @@ interface RegisteredClient {
 
 const clients = new Map<string, RegisteredClient>();
 
+interface AuthCode {
+  client_id: string;
+  redirect_uri: string;
+  code_challenge: string;
+  expires_at: number;
+}
+
+const authCodes = new Map<string, AuthCode>();
+
 function generateAccessToken(clientId: string, clientSecret: string): string {
   return createHash("sha256").update(`${clientId}:${clientSecret}:${randomUUID()}`).digest("hex");
 }
@@ -111,6 +120,56 @@ export async function startTransport() {
         response_types: ["code"],
         token_endpoint_auth_method: "none",
       });
+    });
+
+    // OAuth2 authorization endpoint — single-user auto-approve
+    app.get("/authorize", (req, res) => {
+      const responseType = req.query.response_type;
+      const clientId = req.query.client_id;
+      const redirectUri = req.query.redirect_uri;
+      const codeChallenge = req.query.code_challenge;
+      const codeChallengeMethod = req.query.code_challenge_method;
+      const state = req.query.state;
+
+      if (responseType !== "code") {
+        res.status(400).json({ error: "unsupported_response_type" });
+        return;
+      }
+
+      if (typeof clientId !== "string") {
+        res.status(400).json({ error: "invalid_client" });
+        return;
+      }
+      const client = clients.get(clientId);
+      if (!client) {
+        res.status(400).json({ error: "invalid_client" });
+        return;
+      }
+
+      if (typeof redirectUri !== "string" || !client.redirect_uris.includes(redirectUri)) {
+        res.status(400).json({ error: "invalid_redirect_uri" });
+        return;
+      }
+
+      if (codeChallengeMethod !== "S256" || typeof codeChallenge !== "string" || codeChallenge.length === 0) {
+        res.status(400).json({ error: "invalid_code_challenge" });
+        return;
+      }
+
+      const code = `${randomUUID().replace(/-/g, "")}${randomUUID().replace(/-/g, "")}`;
+      authCodes.set(code, {
+        client_id: clientId,
+        redirect_uri: redirectUri,
+        code_challenge: codeChallenge,
+        expires_at: Date.now() + 60_000,
+      });
+
+      const redirect = new URL(redirectUri);
+      redirect.searchParams.set("code", code);
+      if (typeof state === "string") {
+        redirect.searchParams.set("state", state);
+      }
+      res.redirect(302, redirect.toString());
     });
 
     // OAuth2 token endpoint (client credentials grant)
