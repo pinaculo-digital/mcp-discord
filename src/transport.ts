@@ -32,11 +32,6 @@ function generateAccessToken(clientId: string, clientSecret: string): string {
 }
 
 function authMiddleware(req: Request, res: Response, next: NextFunction) {
-  if (!config.MCP_CLIENT_SECRET) {
-    next();
-    return;
-  }
-
   const authHeader = req.headers.authorization;
   if (!authHeader || !authHeader.startsWith("Bearer ")) {
     res.status(401).json({
@@ -181,36 +176,9 @@ export async function startTransport() {
       res.redirect(302, redirect.toString());
     });
 
-    // OAuth2 token endpoint (client_credentials + authorization_code/PKCE)
+    // OAuth2 token endpoint (authorization_code/PKCE)
     app.post("/oauth/token", (req, res) => {
       const grantType = req.body.grant_type;
-
-      if (grantType === "client_credentials") {
-        const clientId = req.body.client_id;
-        const clientSecret = req.body.client_secret;
-
-        if (!clientId || !clientSecret) {
-          res.status(400).json({ error: "invalid_request", error_description: "client_id and client_secret are required" });
-          return;
-        }
-
-        if (clientId !== config.MCP_CLIENT_ID || clientSecret !== config.MCP_CLIENT_SECRET) {
-          res.status(401).json({ error: "invalid_client" });
-          return;
-        }
-
-        const accessToken = generateAccessToken(clientId, clientSecret);
-        validTokens.set(accessToken, Date.now() + 86_400_000);
-
-        console.log("OAuth2 token issued for client:", clientId);
-
-        res.json({
-          access_token: accessToken,
-          token_type: "Bearer",
-          expires_in: 86400,
-        });
-        return;
-      }
 
       if (grantType === "authorization_code") {
         const code = req.body.code;
@@ -349,9 +317,6 @@ export async function startTransport() {
     app.listen(port, "0.0.0.0", () => {
       console.log(`MCP Streamable HTTP server running on 0.0.0.0:${port}`);
       console.log(`Endpoint: http://localhost:${port}/mcp`);
-      if (config.MCP_CLIENT_SECRET) {
-        console.log("OAuth2 authentication enabled");
-      }
     });
   } else {
     const server = createServer();
