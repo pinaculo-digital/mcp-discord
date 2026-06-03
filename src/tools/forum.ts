@@ -2,6 +2,7 @@ import { ChannelType, ForumChannel, AnyThreadChannel } from "discord.js";
 import { client } from "../discord.js";
 import { config } from "../config.js";
 import { GetForumChannelsSchema, CreateForumPostSchema, GetForumPostSchema, ListForumThreadsSchema, ReplyToForumSchema, DeleteForumPostSchema } from "../schemas.js";
+import { serializeAttachments, serializeEmbeds } from "./message-format.js";
 
 export async function handleGetForumChannels(args: unknown) {
   const parsed = GetForumChannelsSchema.parse(args);
@@ -143,6 +144,8 @@ export async function handleGetForumPost(args: unknown) {
       content: msg.content,
       author: msg.author.tag,
       createdAt: msg.createdAt,
+      attachments: serializeAttachments(msg),
+      embeds: serializeEmbeds(msg),
     })),
   };
 
