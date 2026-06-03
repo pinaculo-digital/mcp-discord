@@ -69,6 +69,9 @@ export async function startTransport() {
 
   if (transportMode === "http") {
     const app = express();
+    // Honor X-Forwarded-Proto from reverse proxy (easypanel/traefik/nginx terminate TLS).
+    // Without this, req.protocol returns "http" and OAuth metadata advertises http:// URLs.
+    app.set("trust proxy", true);
     app.use(express.json());
     app.use(express.urlencoded({ extended: true }));
     const transports: Record<string, StreamableHTTPServerTransport> = {};
