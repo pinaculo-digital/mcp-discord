@@ -1,7 +1,7 @@
-import { ChannelType, ForumChannel } from "discord.js";
+import { ChannelType, ForumChannel, AnyThreadChannel } from "discord.js";
 import { client } from "../discord.js";
 import { config } from "../config.js";
-import { GetForumChannelsSchema, CreateForumPostSchema, GetForumPostSchema, ReplyToForumSchema, DeleteForumPostSchema } from "../schemas.js";
+import { GetForumChannelsSchema, CreateForumPostSchema, GetForumPostSchema, ListForumThreadsSchema, ReplyToForumSchema, DeleteForumPostSchema } from "../schemas.js";
 
 export async function handleGetForumChannels(args: unknown) {
   const parsed = GetForumChannelsSchema.parse(args);
@@ -61,6 +61,62 @@ export async function handleCreateForumPost(args: unknown) {
   });
 
   return { content: [{ type: "text", text: `Successfully created forum post "${title}" with ID: ${thread.id}` }] };
+}
+
+export async function handleListForumThreads(args: unknown) {
+  const { forumChannelId, includeArchived } = ListForumThreadsSchema.parse(args);
+  if (!client.isReady()) {
+    return { content: [{ type: "text", text: "Discord client not logged in. Please use discord_login tool first." }], isError: true };
+  }
+
+  const channel = await client.channels.fetch(forumChannelId);
+  if (!channel || channel.type !== ChannelType.GuildForum) {
+    return { content: [{ type: "text", text: `Channel ID ${forumChannelId} is not a forum channel.` }], isError: true };
+  }
+
+  const forumChannel = channel as ForumChannel;
+  const tagNameById = new Map(forumChannel.availableTags.map((tag) => [tag.id, tag.name]));
+
+  const threads = new Map<string, AnyThreadChannel>();
+  const active = await forumChannel.threads.fetchActive();
+  active.threads.forEach((thread) => threads.set(thread.id, thread));
+
+  if (includeArchived) {
+    let before: AnyThreadChannel | undefined;
+    let hasMore = true;
+    let guard = 0;
+    while (hasMore && guard < 50) {
+      const archived = await forumChannel.threads.fetchArchived({ type: "public", limit: 100, before });
+      archived.threads.forEach((thread) => threads.set(thread.id, thread));
+      const last = archived.threads.last();
+      hasMore = archived.hasMore && last !== undefined;
+      before = last;
+      guard++;
+    }
+  }
+
+  const threadList = [...threads.values()]
+    .map((thread) => ({
+      id: thread.id,
+      name: thread.name,
+      archived: thread.archived ?? false,
+      locked: thread.locked ?? false,
+      messageCount: thread.messageCount ?? 0,
+      createdAt: thread.createdAt,
+      lastMessageId: thread.lastMessageId,
+      tags: thread.appliedTags.map((tagId) => tagNameById.get(tagId) ?? tagId),
+    }))
+    .sort((a, b) => (b.createdAt?.getTime() ?? 0) - (a.createdAt?.getTime() ?? 0));
+
+  const result = {
+    forumChannelId,
+    forumName: forumChannel.name,
+    threadCount: threadList.length,
+    threads: threadList,
+    hint: "Use discord_get_forum_post with a thread id to read the post content and its messages.",
+  };
+
+  return { content: [{ type: "text", text: JSON.stringify(result, null, 2) }] };
 }
 
 export async function handleGetForumPost(args: unknown) {

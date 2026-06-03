@@ -69,6 +69,19 @@ export const toolDefinitions = [
     },
   },
   {
+    name: "discord_list_forum_threads",
+    description:
+      "Lists threads (posts) inside a Discord forum channel, including archived ones by default. Use this to enumerate forum posts when you only have the forum channel ID — discord_read_messages does not work on forum channels. Returns thread IDs to pass to discord_get_forum_post.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        forumChannelId: { type: "string" },
+        includeArchived: { type: "boolean", default: true, description: "Include archived threads. Most finished forum posts are archived, so keep this true to enumerate everything." },
+      },
+      required: ["forumChannelId"],
+    },
+  },
+  {
     name: "discord_get_forum_post",
     description: "Retrieves details about a forum post including its messages",
     inputSchema: {
