@@ -48,6 +48,11 @@ function authMiddleware(req: Request, res: Response, next: NextFunction) {
   }
 
   const token = authHeader.slice(7);
+  // Static bearer bypass for clients without OAuth discovery (Cursor, Cline).
+  if (config.MCP_STATIC_BEARER && token === config.MCP_STATIC_BEARER) {
+    next();
+    return;
+  }
   if (validTokens.has(token)) {
     next();
     return;
