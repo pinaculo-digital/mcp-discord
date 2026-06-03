@@ -147,13 +147,24 @@ export async function startTransport() {
         res.status(400).json({ error: "invalid_client" });
         return;
       }
-      const client = clients.get(clientId);
-      if (!client) {
-        res.status(400).json({ error: "invalid_client" });
+      if (typeof redirectUri !== "string") {
+        res.status(400).json({ error: "invalid_redirect_uri" });
         return;
       }
 
-      if (typeof redirectUri !== "string" || !client.redirect_uris.includes(redirectUri)) {
+      // Auto-register unknown client_ids. Built-in connectors (e.g. claude.ai Discord)
+      // use fixed client_ids without going through /register first. Single-user model:
+      // PKCE verifier check is the real security barrier, not the registration step.
+      let client = clients.get(clientId);
+      if (!client) {
+        client = {
+          client_id: clientId,
+          client_name: "auto-registered",
+          redirect_uris: [redirectUri],
+          created_at: Math.floor(Date.now() / 1000),
+        };
+        clients.set(clientId, client);
+      } else if (!client.redirect_uris.includes(redirectUri)) {
         res.status(400).json({ error: "invalid_redirect_uri" });
         return;
       }
