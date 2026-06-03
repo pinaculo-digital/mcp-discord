@@ -241,6 +241,7 @@ After deploying, run these four checks against the live URL (replace `https://di
 ### Forum Functions
 
 - `discord_get_forum_channels`: Get a list of forum channels
+- `discord_list_forum_threads`: List the threads (posts) inside a forum channel, archived included
 - `discord_create_forum_post`: Create a forum post
 - `discord_get_forum_post`: Get a forum post
 - `discord_reply_to_forum`: Reply to a forum post

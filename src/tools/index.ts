@@ -5,7 +5,7 @@ import { DiscordLoginSchema } from "../schemas.js";
 import { toolDefinitions } from "./definitions.js";
 import { handleDiscordSend, handleReadMessages, handleDeleteMessage } from "./message.js";
 import { handleListGuilds, handleListChannels, handleCreateTextChannel, handleDeleteChannel, handleGetServerInfo } from "./channel.js";
-import { handleGetForumChannels, handleCreateForumPost, handleGetForumPost, handleReplyToForum, handleDeleteForumPost } from "./forum.js";
+import { handleGetForumChannels, handleCreateForumPost, handleGetForumPost, handleListForumThreads, handleReplyToForum, handleDeleteForumPost } from "./forum.js";
 import { handleAddReaction, handleAddMultipleReactions, handleRemoveReaction } from "./reaction.js";
 import { handleCreateWebhook, handleSendWebhookMessage, handleEditWebhook, handleDeleteWebhook } from "./webhook.js";
 
@@ -48,6 +48,7 @@ const handlers: Record<string, ToolHandler> = {
   discord_get_server_info: handleGetServerInfo,
   discord_get_forum_channels: handleGetForumChannels,
   discord_create_forum_post: handleCreateForumPost,
+  discord_list_forum_threads: handleListForumThreads,
   discord_get_forum_post: handleGetForumPost,
   discord_reply_to_forum: handleReplyToForum,
   discord_delete_forum_post: handleDeleteForumPost,
