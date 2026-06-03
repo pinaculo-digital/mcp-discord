@@ -172,37 +172,80 @@ export async function startTransport() {
       res.redirect(302, redirect.toString());
     });
 
-    // OAuth2 token endpoint (client credentials grant)
+    // OAuth2 token endpoint (client_credentials + authorization_code/PKCE)
     app.post("/oauth/token", (req, res) => {
       const grantType = req.body.grant_type;
-      const clientId = req.body.client_id;
-      const clientSecret = req.body.client_secret;
 
-      if (grantType !== "client_credentials") {
-        res.status(400).json({ error: "unsupported_grant_type" });
+      if (grantType === "client_credentials") {
+        const clientId = req.body.client_id;
+        const clientSecret = req.body.client_secret;
+
+        if (!clientId || !clientSecret) {
+          res.status(400).json({ error: "invalid_request", error_description: "client_id and client_secret are required" });
+          return;
+        }
+
+        if (clientId !== config.MCP_CLIENT_ID || clientSecret !== config.MCP_CLIENT_SECRET) {
+          res.status(401).json({ error: "invalid_client" });
+          return;
+        }
+
+        const accessToken = generateAccessToken(clientId, clientSecret);
+        validTokens.add(accessToken);
+
+        console.log("OAuth2 token issued for client:", clientId);
+
+        res.json({
+          access_token: accessToken,
+          token_type: "Bearer",
+          expires_in: 86400,
+        });
         return;
       }
 
-      if (!clientId || !clientSecret) {
-        res.status(400).json({ error: "invalid_request", error_description: "client_id and client_secret are required" });
+      if (grantType === "authorization_code") {
+        const code = req.body.code;
+        const codeVerifier = req.body.code_verifier;
+        const clientId = req.body.client_id;
+        const redirectUri = req.body.redirect_uri;
+
+        if (typeof code !== "string" || typeof codeVerifier !== "string" || typeof clientId !== "string") {
+          res.status(400).json({ error: "invalid_request", error_description: "code, code_verifier and client_id are required" });
+          return;
+        }
+
+        const entry = authCodes.get(code);
+        if (!entry || entry.expires_at < Date.now()) {
+          res.status(400).json({ error: "invalid_grant", error_description: "authorization code invalid or expired" });
+          return;
+        }
+
+        if (entry.client_id !== clientId || entry.redirect_uri !== redirectUri) {
+          res.status(400).json({ error: "invalid_grant", error_description: "client_id or redirect_uri mismatch" });
+          return;
+        }
+
+        const challenge = createHash("sha256").update(codeVerifier).digest("base64url");
+        if (challenge !== entry.code_challenge) {
+          res.status(400).json({ error: "invalid_grant", error_description: "PKCE verifier mismatch" });
+          return;
+        }
+
+        authCodes.delete(code);
+        const accessToken = generateAccessToken(clientId, "pkce");
+        validTokens.add(accessToken);
+
+        console.log("OAuth2 token issued (PKCE) for client:", clientId);
+
+        res.json({
+          access_token: accessToken,
+          token_type: "Bearer",
+          expires_in: 86400,
+        });
         return;
       }
 
-      if (clientId !== config.MCP_CLIENT_ID || clientSecret !== config.MCP_CLIENT_SECRET) {
-        res.status(401).json({ error: "invalid_client" });
-        return;
-      }
-
-      const accessToken = generateAccessToken(clientId, clientSecret);
-      validTokens.add(accessToken);
-
-      console.log("OAuth2 token issued for client:", clientId);
-
-      res.json({
-        access_token: accessToken,
-        token_type: "Bearer",
-        expires_in: 86400,
-      });
+      res.status(400).json({ error: "unsupported_grant_type" });
     });
 
     // Apply auth to all /mcp routes
