@@ -82,6 +82,9 @@ A Discord bot token is required for proper operation. You can provide it in two 
 1. Environment variables:
 ```
 DISCORD_TOKEN=your_discord_bot_token
+# Optional: static bearer token for non-OAuth clients (e.g. Cursor, Cline).
+# Clients pass `Authorization: Bearer <value>`. Leave empty to disable.
+MCP_STATIC_BEARER=
 ```
 
 2. Using the `--config` parameter when launching:

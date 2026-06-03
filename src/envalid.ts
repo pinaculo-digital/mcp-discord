@@ -6,4 +6,5 @@ export const envalid = cleanEnv(process.env, {
   DISCORD_GUILD_ID: str({ default: "" }),
   MCP_CLIENT_ID: str({ default: "discord-mcp" }),
   MCP_CLIENT_SECRET: str({ default: "" }),
+  MCP_STATIC_BEARER: str({ default: "" }),
 });
